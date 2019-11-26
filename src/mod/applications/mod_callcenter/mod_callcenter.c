@@ -929,16 +929,36 @@ done:
 
 cc_status_t cc_agent_del(const char *agent)
 {
-	cc_status_t result = CC_STATUS_SUCCESS;
+	switch_event_t *event;
+	cc_status_t result;
 
 	char *sql;
+	int deleted_row_count;
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Deleted Agent %s\n", agent);
-	sql = switch_mprintf("DELETE FROM agents WHERE name = '%q';"
-			"DELETE FROM tiers WHERE agent = '%q';",
-			agent, agent);
+	sql = switch_mprintf("DELETE FROM tiers WHERE agent = '%q';", agent);
 	cc_execute_sql(NULL, sql, NULL);
 	switch_safe_free(sql);
+
+	sql = switch_mprintf("DELETE FROM agents WHERE name = '%q';",	agent);
+	deleted_row_count = cc_execute_sql_affected_rows(sql);
+	switch_safe_free(sql);
+
+  if (deleted_row_count > 0) {
+
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Deleted Agent %s\n", agent);
+
+		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-del");
+			switch_event_fire(&event);
+		}
+		result = CC_STATUS_SUCCESS;
+
+	} else {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Agent %s not found, can not be deleted\n", agent);
+		result = CC_STATUS_AGENT_NOT_FOUND;
+	}
+
 	return result;
 }
 
@@ -1188,6 +1208,7 @@ cc_status_t cc_tier_add(const char *queue_name, const char *agent, const char *s
 	cc_status_t result = CC_STATUS_SUCCESS;
 	char *sql;
 	cc_queue_t *queue = NULL;
+	switch_event_t *event = NULL;
 	if (!(queue = get_queue(queue_name))) {
 		result = CC_STATUS_QUEUE_NOT_FOUND;
 		goto done;
@@ -1223,6 +1244,14 @@ cc_status_t cc_tier_add(const char *queue_name, const char *agent, const char *s
 				queue_name, agent, state, level, position);
 		cc_execute_sql(NULL, sql, NULL);
 		switch_safe_free(sql);
+
+		if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
+  		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Queue", queue_name);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-State", state);
+			switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "tier-add");
+			switch_event_fire(&event);
+		}
 
 		result = CC_STATUS_SUCCESS;
 	} else {
@@ -1307,11 +1336,19 @@ cc_status_t cc_tier_del(const char *queue_name, const char *agent)
 {
 	cc_status_t result = CC_STATUS_SUCCESS;
 	char *sql;
+	switch_event_t *event = NULL;
 
 	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Deleted tier Agent %s in Queue %s\n", agent, queue_name);
 	sql = switch_mprintf("DELETE FROM tiers WHERE queue = '%q' AND agent = '%q';", queue_name, agent);
 	cc_execute_sql(NULL, sql, NULL);
 	switch_safe_free(sql);
+
+	if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
+    switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Queue", queue_name);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
+		switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "tier-del");
+		switch_event_fire(&event);
+	}
 
 	result = CC_STATUS_SUCCESS;
 
@@ -3588,6 +3625,9 @@ SWITCH_STANDARD_API(cc_config_api_function)
 					case CC_STATUS_SUCCESS:
 						stream->write_function(stream, "%s", "+OK\n");
 						break;
+					case CC_STATUS_AGENT_NOT_FOUND:
+						stream->write_function(stream, "%s", "-ERR Agent not found!\n");
+						goto done;
 					default:
 						stream->write_function(stream, "%s", "-ERR Unknown Error!\n");
 						goto done;
