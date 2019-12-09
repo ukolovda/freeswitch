@@ -697,9 +697,13 @@ static switch_bool_t cc_execute_sql_callback(cc_queue_t *queue, switch_mutex_t *
 		goto end;
 	}
 
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Executing %s\n", sql);
+	if (sql[0] != 'S') {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Executing %s\n", sql);
+	}
 	switch_cache_db_execute_sql_callback(dbh, sql, callback, pdata, &errmsg);
-	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Complete\n");
+	if (sql[0] != 'S') {
+		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Complete\n");
+	}
 
 	if (errmsg) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "SQL ERR: [%s] %s\n", sql, errmsg);
