@@ -596,7 +596,9 @@ static int cc_execute_sql_affected_rows(char *sql) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error Opening DB\n");
 		return -1;
 	}
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Executing %s\n", sql);
 	switch_cache_db_execute_sql(dbh, sql, NULL);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Complete\n");
 	res = switch_cache_db_affected_rows(dbh);
 	switch_cache_db_release_db_handle(&dbh);
 	return res;
@@ -621,7 +623,9 @@ char *cc_execute_sql2str(cc_queue_t *queue, switch_mutex_t *mutex, char *sql, ch
 		goto end;
 	}
 
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Executing %s\n", sql);
 	ret = switch_cache_db_execute_sql2str(dbh, sql, resbuf, len, NULL);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Complete\n");
 
 end:
 	switch_cache_db_release_db_handle(&dbh);
@@ -655,7 +659,9 @@ static switch_status_t cc_execute_sql(cc_queue_t *queue, char *sql, switch_mutex
 		goto end;
 	}
 
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Executing %s\n", sql);
 	status = switch_cache_db_execute_sql(dbh, sql, NULL);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Complete\n");
 
 end:
 
@@ -691,7 +697,9 @@ static switch_bool_t cc_execute_sql_callback(cc_queue_t *queue, switch_mutex_t *
 		goto end;
 	}
 
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Executing %s\n", sql);
 	switch_cache_db_execute_sql_callback(dbh, sql, callback, pdata, &errmsg);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "DB: Complete\n");
 
 	if (errmsg) {
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "SQL ERR: [%s] %s\n", sql, errmsg);
