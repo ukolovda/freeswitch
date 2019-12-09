@@ -428,6 +428,7 @@ switch_status_t pgsql_send_query(switch_pgsql_handle_t *handle, const char* sql)
 
 	switch_safe_free(handle->sql);
 	handle->sql = strdup(sql);
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "PGSQL: Executing %s\n", sql);
 	if (!PQsendQuery(handle->con, sql)) {
 		err_str = pgsql_handle_get_error(handle);
 		switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Failed to send query (%s) to database: %s\n", sql, err_str);
@@ -435,7 +436,7 @@ switch_status_t pgsql_send_query(switch_pgsql_handle_t *handle, const char* sql)
 		pgsql_finish_results(handle);
 		goto error;
 	}
-
+  switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "PGSQL: Complete\n");
 	return SWITCH_STATUS_SUCCESS;
 error:
 	return SWITCH_STATUS_FALSE;
