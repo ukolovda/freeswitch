@@ -2249,6 +2249,8 @@ done:
 	switch_safe_free(sql);
 
 	/* If we are in Status Available On Demand, set state to Idle so we do not receive another call until state manually changed to Waiting */
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Current agent \"%s\" status: \"%s\", current bridged: %d\n",
+		h->agent_name, h->agent_status, bridged);
 	if (!strcasecmp(cc_agent_status2str(CC_AGENT_STATUS_AVAILABLE_ON_DEMAND), h->agent_status) && bridged) {
 		cc_agent_update("state", cc_agent_state2str(CC_AGENT_STATE_IDLE), h->agent_name);
 	} else {
