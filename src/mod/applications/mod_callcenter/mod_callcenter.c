@@ -1732,6 +1732,7 @@ static void *SWITCH_THREAD_FUNC outbound_agent_thread_run(switch_thread_t *threa
 	switch_time_t t_member_called = atoi(h->member_joined_epoch);
 	switch_event_t *event = NULL;
 	int bridged = 1;
+	char current_agent_status[256] = "";
 
 	switch_mutex_lock(globals.mutex);
 	globals.threads++;
@@ -2261,8 +2262,16 @@ done:
 	cc_execute_sql(NULL, sql, NULL);
 	switch_safe_free(sql);
 
+
+	/* Read actual agent status (can be changed by external request) */
+	sql = switch_mprintf("SELECT status FROM agents WHERE name = '%q'", h->agent_name);
+	cc_execute_sql2str(NULL, NULL, sql, current_agent_status, sizeof(current_agent_status));
+	switch_safe_free(sql);
+
 	/* If we are in Status Available On Demand, set state to Idle so we do not receive another call until state manually changed to Waiting */
-	if (!strcasecmp(cc_agent_status2str(CC_AGENT_STATUS_AVAILABLE_ON_DEMAND), h->agent_status) && bridged) {
+	switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG, "Current agent \"%s\" status: \"%s\", current bridged: %d\n",
+		h->agent_name, current_agent_status, bridged);
+	if (!strcasecmp(cc_agent_status2str(CC_AGENT_STATUS_AVAILABLE_ON_DEMAND), current_agent_status) && bridged) {
 		cc_agent_update("state", cc_agent_state2str(CC_AGENT_STATE_IDLE), h->agent_name);
 	} else {
 		cc_agent_update("state", cc_agent_state2str(CC_AGENT_STATE_WAITING), h->agent_name);
