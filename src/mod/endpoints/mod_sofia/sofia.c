@@ -4472,6 +4472,7 @@ switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 	sofia_profile_t *profile = NULL;
 	char url[512] = "";
 	int profile_found = 0;
+	uint32_t start_delay = 0;
 	switch_event_t *params = NULL;
 	sofia_profile_t *profile_already_started = NULL;
 
@@ -4788,6 +4789,8 @@ switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 						}
 					} else if (!strcasecmp(var, "odbc-dsn") && !zstr(val)) {
 						profile->odbc_dsn = switch_core_strdup(profile->pool, val);
+					} else if (!strcasecmp(var, "odbc-start-delay") && !zstr(val)) {
+					  profile->odbc_start_delay = atoi(val);
 					} else if (!strcasecmp(var, "db-pre-trans-execute") && !zstr(val)) {
 						profile->pre_trans_execute = switch_core_strdup(profile->pool, val);
 					} else if (!strcasecmp(var, "db-post-trans-execute") && !zstr(val)) {
@@ -6351,7 +6354,11 @@ switch_status_t config_sofia(sofia_config_t reload, char *profile_name)
 						launch_sofia_profile_thread(profile);
 						if (profile->odbc_dsn) {
 							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Connecting ODBC Profile %s [%s]\n", profile->name, url);
-							switch_yield(1000000);
+							start_delay = profile->odbc_start_delay;
+							if (start_delay == 0) {
+							  start_delay = 1000;
+							}
+							switch_yield(start_delay * 1000);
 						} else {
 							switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_NOTICE, "Started Profile %s [%s]\n", profile->name, url);
 						}
