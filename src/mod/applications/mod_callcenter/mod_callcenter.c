@@ -1020,6 +1020,7 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 	char *sql;
 	char res[256] = "";
 	switch_event_t *event;
+	char current_agent_status[256] = "";
 
 	/* Check to see if agent already exist */
 	sql = switch_mprintf("SELECT count(*) FROM agents WHERE name = '%q'", agent);
@@ -1084,9 +1085,15 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 
 			result = CC_STATUS_SUCCESS;
 
+			/* Read actual agent status */
+			sql = switch_mprintf("SELECT status FROM agents WHERE name = '%q'", agent);
+			cc_execute_sql2str(NULL, NULL, sql, current_agent_status, sizeof(current_agent_status));
+			switch_safe_free(sql);
+
 			if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-state-change");
+				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-Status", current_agent_status);
 				switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-State", value);
 				switch_event_fire(&event);
 			}
@@ -1177,9 +1184,16 @@ cc_status_t cc_agent_update(const char *key, const char *value, const char *agen
 
 			if (cc_execute_sql_affected_rows(sql) > 0) {
 				result = CC_STATUS_SUCCESS;
+
+				/* Read actual agent status */
+				sql = switch_mprintf("SELECT status FROM agents WHERE name = '%q'", agent);
+				cc_execute_sql2str(NULL, NULL, sql, current_agent_status, sizeof(current_agent_status));
+				switch_safe_free(sql);
+
 				if (switch_event_create_subclass(&event, SWITCH_EVENT_CUSTOM, CALLCENTER_EVENT) == SWITCH_STATUS_SUCCESS) {
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent", agent);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Action", "agent-state-change");
+					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-Status", current_agent_status);
 					switch_event_add_header_string(event, SWITCH_STACK_BOTTOM, "CC-Agent-State", value);
 					switch_event_fire(&event);
 				}
